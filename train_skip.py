@@ -178,25 +178,39 @@ def test(x_data,y_data,model):
 
 	preds = model.predict(new_x_data)
 
-	startPointError = []
-	endPointError = []
+	startPointError1 = []
+	endPointError1 = []
+    startPointError2 = []
+	endPointError2 = []
 
 	for i,pred in enumerate(preds):
 		predStart = pred[:2]
 		trueStart = y_data[i][:2]
-		startPointError.append(getDistance(predStart,trueStart))
+		startPointError1.append(getDistance(predStart,trueStart))
 
 		predEnd = getNewPoint(pred[:2],pred[2],pred[3])
 		trueEnd = getNewPoint(y_data[i][:2],y_data[i][2],y_data[i][3])
-		endPointError.append(getDistance(predEnd,trueEnd))
-	
-	averageStartPointError = sum(startPointError)/len(startPointError)
-	averageEndPointError = sum(endPointError)/len(endPointError)
+		endPointError1.append(getDistance(predEnd,trueEnd))
 
-	print("The Average Start Point Error is {} pixels".format(averageStartPointError))
-	print("The Average End Point Error is {} pixels".format(averageEndPointError))
+        predStart = pred[4:6]
+		trueStart = y_data[i][4:6]
+		startPointError2.append(getDistance(predStart,trueStart))
+
+		predEnd = getNewPoint(pred[4:6],pred[6],pred[7])
+		trueEnd = getNewPoint(y_data[i][4:6],y_data[i][6],y_data[i][7])
+		endPointError2.append(getDistance(predEnd,trueEnd))
 	
-	return startPointError,endPointError
+	averageStartPointError1 = sum(startPointError1)/len(startPointError1)
+	averageEndPointError1 = sum(endPointError1)/len(endPointError1)
+    averageStartPointError2 = sum(startPointError2)/len(startPointError2)
+	averageEndPointError2 = sum(endPointError2)/len(endPointError2)
+
+	print("The Average Start Point 1 Error is {} pixels".format(averageStartPointError1))
+	print("The Average End Point 1 Error is {} pixels".format(averageEndPointError1))
+    print("The Average Start Point 2 Error is {} pixels".format(averageStartPointError2))
+	print("The Average End Point 2 Error is {} pixels".format(averageEndPointError2))
+	
+	return startPointError1,endPointError1,startPointError2,endPointError2
 
 
 def main():
