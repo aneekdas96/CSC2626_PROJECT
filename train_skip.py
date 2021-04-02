@@ -1,13 +1,12 @@
 import cv2
 import numpy as np
 import os
-from model import dual_net
+import math
+from model_skip import dual_net
 from keras.optimizers import SGD,Adam
 from keras.losses import binary_crossentropy
 import tensorflow as tf
-import matplotlib.pyplot as plt 
-import seaborn as sns
-import pandas as pd 
+
 
 def get_data_rope_run(runNumber):
 
@@ -26,11 +25,14 @@ def get_data_rope_run(runNumber):
             img = cv2.imread(img_path)
             img_list.append(img)
     
-    for i in range(len(img_list)-1):
-        x_data.append([img_list[i],img_list[i+1]])
-        y_data.append(actions[i][:4]) #Dont take last index
+    for i in range(len(img_list)-2):
+        x_data.append([img_list[i],img_list[i+2]]) #Skip an image
+        action1 = actions[i][:4] #Change if predicting all 8 actions or 1
+        action2 = actions[i+1][:4]
+        both_actions = np.concatenate([action1,action2])
+        y_data.append(both_actions) #Dont take last index
 
-    return np.array(x_data), np.array(y_data)
+    return x_data, y_data
 
 def get_rope_data(runs):
 
@@ -44,24 +46,22 @@ def get_rope_data(runs):
             x_data = x_temp
             y_data = y_temp
         else:
-            x_data = np.concatenate([x_data,x_temp])
-            y_data = np.concatenate([y_data,y_temp])
+            for j in range(0,len(x_temp)):
+                x_data.append(x_temp[j])
+                y_data.append(y_temp[j])
         print("Retrived Run{}".format(runNum))
-    
-    #x_data = np.array(x_data)
-    #y_data = np.array(y_data)
 
     rng_state = np.random.get_state()
     np.random.shuffle(x_data)
     np.random.set_state(rng_state)
     np.random.shuffle(y_data)
     
-    return x_data,y_data
+    return np.array(x_data),np.array(y_data)
 
-def create_batch(batch_size, step, x, y):
+def create_batch(batch_size, step, x_train,y_train):
 
-    batch_x = np.zeros((2, batch_size, 240, 240, 3))
-    batch_y = np.zeros((batch_size, 4))
+    batch_x = np.zeros((2,batch_size,240,240,3))
+    batch_y = np.zeros((batch_size,8)) #Change if predicting all 8 actions or 1
 
     batch_start_index = step * batch_size
     batch_stop_index = (step + 1) * batch_size - 1
@@ -69,13 +69,13 @@ def create_batch(batch_size, step, x, y):
     # get the samples in the batch
     counter = 0
     while batch_start_index < batch_stop_index:
-    	batch_x[0][counter] = x[batch_start_index][0]
-    	batch_x[1][counter] = x[batch_start_index][1]
-    	batch_y[counter] = y[batch_start_index]
+    	batch_x[0][counter] = x_train[batch_start_index][0]
+    	batch_x[1][counter] = x_train[batch_start_index][1]
+    	batch_y[counter] = y_train[batch_start_index]
     	counter = counter + 1
     	batch_start_index = batch_start_index + 1
 
-    return batch_x, batch_y
+    return batch_x,batch_y
 
 
 
@@ -93,8 +93,7 @@ def train(x_train, y_train, x_validation, y_validation, epochs, batch_size):
 	print('Number of steps per epoch : ', max_steps)
 
 	print("Training...")
-	total_training_loss = []
-	total_validation_loss = []
+	loss_list = []
 
 	# training loop
 	for epoch in range(1,epochs+1):
@@ -106,6 +105,7 @@ def train(x_train, y_train, x_validation, y_validation, epochs, batch_size):
 
 		# loop through all batches. 1 batch/ step. each step updates the parameters after batch_size samples
 		while step < max_steps:
+
 			# get batch
 			batch_x,batch_y = create_batch(batch_size, step, x_train, y_train)
 
@@ -118,8 +118,8 @@ def train(x_train, y_train, x_validation, y_validation, epochs, batch_size):
 
 			# optimize parameters 
 			optimizer.apply_gradients(zip(grads, model.trainable_weights))
-			total_step_loss = loss_val.numpy().mean()
-			epoch_loss.append(total_step_loss)
+
+			epoch_loss.append(loss_val)
 
 			if step % 10 == 0:
 				print('Step: ', step, ', Loss: ', loss_val.numpy().mean())
@@ -128,48 +128,31 @@ def train(x_train, y_train, x_validation, y_validation, epochs, batch_size):
 
 		print('Average Loss for Epoch: ', epoch, ' : ', np.array(epoch_loss).mean())
 
-		# append epoch loss to the list of training losses
-		total_training_loss.append(np.array(epoch_loss).mean())
-
 		# now get loss for validation set
 		n_validation_samples = len(x_validation)
-		print('The number of validation samples : ', n_validation_samples)
-		
-		max_validation_steps = int(len(x_validation)/batch_size) ###################
-		print('The number of steps in total : ', max_validation_steps)
-
-		# x_validation_reshaped = np.reshape(x_validation, (2, n_validation_samples, 240, 240, 3)) # (n_samples, 2, 240, 240, 3) -> (2, n_samples, 240, 240, 3)
-		validation_losses = []
-		validation_step = 0
-		while validation_step < max_validation_steps:
-			print('Evaluating on validation set...')
-			validation_batch_x, validation_batch_y = create_batch(batch_size, validation_step, x_validation, y_validation)
-			# print('Inside validation batch : ', validation_step)
-			# print('Shape of validation x : ', validation_batch_x.shape)
-			# print('Shape of validation y : ', validation_batch_y.shape)
-			validation_y_pred = model([validation_batch_x[0], validation_batch_x[1]], training = False)
-			validation_step_loss = tf.keras.losses.MSE(validation_y_pred, validation_batch_y)
-			validation_losses.append(np.array(validation_step_loss).mean())
-			validation_step = validation_step + 1
-
-		mean_validation_loss = np.array(validation_losses).mean()
-		print('Mean Validation Loss for Epoch : ', epoch, ' : ', mean_validation_loss)
-		total_validation_loss.append(mean_validation_loss)
-
-
-		# validation_preds = model([x_validation_reshaped[0], x_validation_reshaped[1]], training = False)
-		# validation_loss = tf.keras.losses.MSE(validation_preds, y_validation)
-		# mean_validation_loss = np.array(validation_loss).mean()
-		# print('validation loss for Epoch: ', epoch, ' : ', mean_validation_loss)
+		x_validation_reshaped = np.reshape(x_validation, (2, n_validation_samples, 240, 240, 3)) # (n_samples, 2, 240, 240, 3) -> (2, n_samples, 240, 240, 3)
+		validation_preds = model([x_validation_reshaped[0], x_validation_reshaped[1]], training = False)
+		validation_loss = tf.keras.losses.MSE(validation_preds, y_validation)
+		mean_validation_loss = np.array(validation_loss).mean()
+		print('validation loss for Epoch: ', epoch, ' : ', mean_validation_loss)
 		
 		# save the model if this performs better than the previous model on the validation set
 		if mean_validation_loss < prev_validation_loss:
 			print('Saving model...')
-			model.save('model.h5')
-			# np.save("loss.npy", loss, allow_pickle = True, fix_imports = True)
+			model.save('model_skip.h5')
+			#np.save("loss_skip.npy", loss, allow_pickle = True, fix_imports = True)
 			prev_validation_loss = mean_validation_loss
 
-	return model, total_training_loss, total_validation_loss
+	return model,loss_list
+
+
+def getDistance(p1,p2):
+	return math.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
+
+def getNewPoint(point,angle,dist):
+	new_x = point[0] + dist*math.cos(angle)
+	new_y = point[1] + dist*math.cos(angle)
+	return [new_x,new_y]
 
 def test(x_data,y_data,model):
 
@@ -180,7 +163,7 @@ def test(x_data,y_data,model):
 
 	startPointError1 = []
 	endPointError1 = []
-    startPointError2 = []
+	startPointError2 = []
 	endPointError2 = []
 
 	for i,pred in enumerate(preds):
@@ -192,7 +175,7 @@ def test(x_data,y_data,model):
 		trueEnd = getNewPoint(y_data[i][:2],y_data[i][2],y_data[i][3])
 		endPointError1.append(getDistance(predEnd,trueEnd))
 
-        predStart = pred[4:6]
+		predStart = pred[4:6]
 		trueStart = y_data[i][4:6]
 		startPointError2.append(getDistance(predStart,trueStart))
 
@@ -202,16 +185,15 @@ def test(x_data,y_data,model):
 	
 	averageStartPointError1 = sum(startPointError1)/len(startPointError1)
 	averageEndPointError1 = sum(endPointError1)/len(endPointError1)
-    averageStartPointError2 = sum(startPointError2)/len(startPointError2)
+	averageStartPointError2 = sum(startPointError2)/len(startPointError2)
 	averageEndPointError2 = sum(endPointError2)/len(endPointError2)
 
 	print("The Average Start Point 1 Error is {} pixels".format(averageStartPointError1))
 	print("The Average End Point 1 Error is {} pixels".format(averageEndPointError1))
-    print("The Average Start Point 2 Error is {} pixels".format(averageStartPointError2))
+	print("The Average Start Point 2 Error is {} pixels".format(averageStartPointError2))
 	print("The Average End Point 2 Error is {} pixels".format(averageEndPointError2))
 	
 	return startPointError1,endPointError1,startPointError2,endPointError2
-
 
 def main():
 
@@ -221,13 +203,8 @@ def main():
 
 	print("Getting Data...")
 	X,y = get_rope_data(rope_runs)
-	np.save("X.npy", X, allow_pickle=True, fix_imports=True)
-	np.save("y.npy", y, allow_pickle=True, fix_imports=True)
-
-	#Load Data
-	print('Loading Data...')
-	#X = np.load("X.npy")
-	#y = np.load("y.npy")
+	np.save("X_skip.npy", X, allow_pickle=True, fix_imports=True)
+	np.save("y_skip.npy", y, allow_pickle=True, fix_imports=True)
 
 	# split the data into training, validation and test: (.7, .2, .1) split
 	train_index = int(len(X) * 0.7)
@@ -245,18 +222,15 @@ def main():
 	x_test = X[validation_index:]
 	y_test = y[validation_index:]
 
-	model, total_training_loss, total_validation_loss = train(x_train, y_train, x_validation, y_validation, epochs, batch_size)
+	#Load Data
+	#X = np.load("X.npy")
+	#y = np.load("y.npy")
 
-	print('The losses for training set : ', total_training_loss)
+	model, loss = train(x_train, y_train, x_validation, y_validation, epochs, batch_size)
 
-	# plot the training losses
-	loss_df = pd.DataFrame()
-	loss_df['epochs'] = list(range(epochs))
-	loss_df['validation_loss'] = total_validation_loss
-	loss_df['training_loss'] = total_training_loss
-	loss_df = loss_df.set_index('epochs')
-	sns.lineplot(data = loss_df)
-	plt.show()
+	# model.save("model.h5")
+	# np.save("loss.npy", loss, allow_pickle=True, fix_imports=True)
+
 
 if __name__ == "__main__":
     main()
