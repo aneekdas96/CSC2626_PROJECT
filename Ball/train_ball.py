@@ -9,13 +9,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd 
 
-def get_data_rope_run(runNumber):
+def get_data_ball_run(runNumber):
 
     x_data = [] # x -> (n_samples, 2, 240, 240, 3)
     y_data = [] # y -> (n_samples, 4)
     img_list = []
 
-    run_folder = os.path.join("rope","run{}".format(runNumber))
+    run_folder = os.path.join("ball","run{}".format(runNumber))
     action_file = os.path.join(run_folder,"actions.npy")
     actions = np.load(action_file)
 
@@ -32,20 +32,21 @@ def get_data_rope_run(runNumber):
 
     return np.array(x_data), np.array(y_data)
 
-def get_rope_data(runs):
+def get_ball_data(runs):
 
     x_data = []
     y_data = []
 
-    for i in range(3,runs):
+    for i in range(0,runs):
         runNum = str(i).zfill(2)
-        x_temp, y_temp = get_data_rope_run(runNum)
-        if i == 3:
+        x_temp, y_temp = get_data_ball_run(runNum)
+        if i == 0:
             x_data = x_temp
             y_data = y_temp
         else:
-            x_data = np.concatenate([x_data,x_temp])
-            y_data = np.concatenate([y_data,y_temp])
+            for j in range(0,len(x_temp)):
+                x_data.append(x_temp[j])
+                y_data.append(y_temp[j])
         print("Retrived Run{}".format(runNum))
     
     #x_data = np.array(x_data)
@@ -76,7 +77,6 @@ def create_batch(batch_size, step, x, y):
     	batch_start_index = batch_start_index + 1
 
     return batch_x, batch_y
-
 
 
 def train(x_train, y_train, x_validation, y_validation, epochs, batch_size):
@@ -165,48 +165,21 @@ def train(x_train, y_train, x_validation, y_validation, epochs, batch_size):
 		# save the model if this performs better than the previous model on the validation set
 		if mean_validation_loss < prev_validation_loss:
 			print('Saving model...')
-			model.save('model.h5')
+			model.save('model_ball.h5')
 			# np.save("loss.npy", loss, allow_pickle = True, fix_imports = True)
 			prev_validation_loss = mean_validation_loss
 
 	return model, total_training_loss, total_validation_loss
 
-def test(x_data,y_data,model):
-
-	num_test_samples = len(x_data)
-	new_x_data = np.reshape(x_data,(2,num_test_samples,240,240,3))
-
-	preds = model.predict(new_x_data)
-
-	startPointError = []
-	endPointError = []
-
-	for i,pred in enumerate(preds):
-		predStart = pred[:2]
-		trueStart = y_data[i][:2]
-		startPointError.append(getDistance(predStart,trueStart))
-
-		predEnd = getNewPoint(pred[:2],pred[2],pred[3])
-		trueEnd = getNewPoint(y_data[i][:2],y_data[i][2],y_data[i][3])
-		endPointError.append(getDistance(predEnd,trueEnd))
-	
-	averageStartPointError = sum(startPointError)/len(startPointError)
-	averageEndPointError = sum(endPointError)/len(endPointError)
-
-	print("The Average Start Point Error is {} pixels".format(averageStartPointError))
-	print("The Average End Point Error is {} pixels".format(averageEndPointError))
-	
-	return startPointError,endPointError
-
 
 def main():
 
-	epochs = 10
+	epochs = 25
 	batch_size = 100
-	rope_runs = 68
+	ball_runs = 1
 
 	print("Getting Data...")
-	X,y = get_rope_data(rope_runs)
+	X,y = get_ball_data(ball_runs)
 	np.save("X.npy", X, allow_pickle=True, fix_imports=True)
 	np.save("y.npy", y, allow_pickle=True, fix_imports=True)
 
@@ -242,6 +215,7 @@ def main():
 	loss_df['training_loss'] = total_training_loss
 	loss_df = loss_df.set_index('epochs')
 	sns.lineplot(data = loss_df)
+	plt.savefig("ball_loss.png")
 	plt.show()
 
 if __name__ == "__main__":

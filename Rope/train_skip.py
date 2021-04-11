@@ -144,56 +144,7 @@ def train(x_train, y_train, x_validation, y_validation, epochs, batch_size):
 			prev_validation_loss = mean_validation_loss
 
 	return model,loss_list
-
-
-def getDistance(p1,p2):
-	return math.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
-
-def getNewPoint(point,angle,dist):
-	new_x = point[0] + dist*math.cos(angle)
-	new_y = point[1] + dist*math.cos(angle)
-	return [new_x,new_y]
-
-def test(x_data,y_data,model):
-
-	num_test_samples = len(x_data)
-	new_x_data = np.reshape(x_data,(2,num_test_samples,240,240,3))
-
-	preds = model.predict(new_x_data)
-
-	startPointError1 = []
-	endPointError1 = []
-	startPointError2 = []
-	endPointError2 = []
-
-	for i,pred in enumerate(preds):
-		predStart = pred[:2]
-		trueStart = y_data[i][:2]
-		startPointError1.append(getDistance(predStart,trueStart))
-
-		predEnd = getNewPoint(pred[:2],pred[2],pred[3])
-		trueEnd = getNewPoint(y_data[i][:2],y_data[i][2],y_data[i][3])
-		endPointError1.append(getDistance(predEnd,trueEnd))
-
-		predStart = pred[4:6]
-		trueStart = y_data[i][4:6]
-		startPointError2.append(getDistance(predStart,trueStart))
-
-		predEnd = getNewPoint(pred[4:6],pred[6],pred[7])
-		trueEnd = getNewPoint(y_data[i][4:6],y_data[i][6],y_data[i][7])
-		endPointError2.append(getDistance(predEnd,trueEnd))
 	
-	averageStartPointError1 = sum(startPointError1)/len(startPointError1)
-	averageEndPointError1 = sum(endPointError1)/len(endPointError1)
-	averageStartPointError2 = sum(startPointError2)/len(startPointError2)
-	averageEndPointError2 = sum(endPointError2)/len(endPointError2)
-
-	print("The Average Start Point 1 Error is {} pixels".format(averageStartPointError1))
-	print("The Average End Point 1 Error is {} pixels".format(averageEndPointError1))
-	print("The Average Start Point 2 Error is {} pixels".format(averageStartPointError2))
-	print("The Average End Point 2 Error is {} pixels".format(averageEndPointError2))
-	
-	return startPointError1,endPointError1,startPointError2,endPointError2
 
 def main():
 
