@@ -14,20 +14,22 @@ Instructions for installing Vizdoom
 
 5. Please run run_doom_model_on_scenarios.py to evaluate our model on scenarios where intermediate steps are provided as human demonstrations. 
 
+## Rope Experiment
+To run the vanilla rope experiment
+1. Please run train.py. This will read the dataset, load the model architecture, train the model (defined in model.py) and plot the loss curves.
+
+To run the rope experiment with skipped images
+1. Please run train_skip.py. This will read the dataset, load the model architecture, train the model (defined in model_skip.py) and plot the loss curves.
+
+## Ball Experiment
+To run the experiment on the ball dataset
+1. First, please run clean_ball_data.py. This will create image sequences from raw images.
+2. Please run train_ball.py. This will train the model on the dataset and plot loss curves.
+3. Please run test_ball.py to evaluate the model.
+
+
 Notes:
 1. All hyperparameters used for the experiments are declared after the imports section of each file. Please feel free to change them
    to replicate all results mentioned in our report.
 
-2. Please contact us at aneekdas@cs.toronto.edu and jackellis@cs.toronto.edu if you have any queries regarding the implementation/ execution. 
-
-## Rope Experiment
-**model.py:** Model file for training on non-skipped sequence of images  
-**model_skip.py:** Model file for training on skipped sequence of images  
-**train.py:** Script to train the original rope model. Can change the number of epochs, batch size, and amount of data  
-**train_skip.py:** Script to train the skipping rope model. Can change the number of epochs, batch size, and amount of data  
-
-## Ball Experiment
-**clean_ball_data.py:** Contains functions to create image sequences from raw images  
-**model.py:** Model file for training on sequence of images  
-**train_ball.py:** Script to train the ball model. Can change the number of epochs, batch size, and amount of data  
-**test_ball.py:** Evaluates the saved model  
+2. Please contact us at aneekdas@cs.toronto.edu and jackellis@cs.toronto.edu if you have any queries regarding the implementation/execution or need access to any/all of the 3 datasets.
