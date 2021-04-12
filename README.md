@@ -18,16 +18,16 @@ Notes:
 1. All hyperparameters used for the experiments are declared after the imports section of each file. Please feel free to change them
    to replicate all results mentioned in our report.
 
-2. Please contact us at aneekdas@cs.toronto.edu if you have any queries regarding the implementation/ execution. 
+2. Please contact us at aneekdas@cs.toronto.edu and jackellis@cs.toronto.edu if you have any queries regarding the implementation/ execution. 
 
 ## Rope Experiment
 **model.py:** Model file for training on non-skipped sequence of images  
 **model_skip.py:** Model file for training on skipped sequence of images  
-**train.py:** Script to train the origianl rope model. Can change the number of epochs, batch szie, and amount of data  
-**train_skip.py:** Script to train the skipping rope model. Can change the number of epochs, batch szie, and amount of data  
+**train.py:** Script to train the original rope model. Can change the number of epochs, batch size, and amount of data  
+**train_skip.py:** Script to train the skipping rope model. Can change the number of epochs, batch size, and amount of data  
 
 ## Ball Experiment
-**clean_ball_data.py:** Contains funtcions to create image sequences from raw images  
+**clean_ball_data.py:** Contains functions to create image sequences from raw images  
 **model.py:** Model file for training on sequence of images  
-**train_ball.py:** Script to train the ball model. Can change the number of epochs, batch szie, and amount of data  
+**train_ball.py:** Script to train the ball model. Can change the number of epochs, batch size, and amount of data  
 **test_ball.py:** Evaluates the saved model  
