@@ -1,6 +1,9 @@
 # CSC2626_PROJECT
 CSC2626 Project: Using Self-supervised learning with imitation learning for deformable object manipulation.
 
+We prefer that you use an Anaconda environment for running our project.
+Please run ' pip install -r requirements.txt ' inside your environment on your command prompt to install the necessary packages.
+
 ## Doom Experiment
 Instructions for installing Vizdoom
 1. Please visit the following link and follow instructions to install the Vizdoom package for your python version and OS. 
